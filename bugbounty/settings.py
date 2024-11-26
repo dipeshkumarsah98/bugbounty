@@ -22,7 +22,9 @@ DEBUG = os.getenv('DEBUG') == 'True'
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1", 
-    "bugbounty-ecru.vercel.app"]
+    "vercel.app",
+    "bugbounty-ecru.vercel.app"
+    ]
 
 
 print('environment', os.environ.get('DB_PASSWORD'))
