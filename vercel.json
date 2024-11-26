@@ -20,5 +20,5 @@
       "dest": "bugbounty/wsgi.py"
     }
   ],
-  "buildCommand": "python manage.py collectstatic --noinput"
+  "buildCommand": "echo 'Running collectstatic...' && python manage.py collectstatic --noinput && echo 'collectstatic complete' && ls -R staticfiles"
 }
