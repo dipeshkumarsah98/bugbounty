@@ -19,7 +19,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key')
 DEBUG = os.getenv('DEBUG') == 'True'
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*", ".vercel.app"]
 
 
 print('environment', os.environ.get('DB_PASSWORD'))
@@ -85,7 +85,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'bugbounty.wsgi.application'
+WSGI_APPLICATION = 'bugbounty.wsgi.app'
 
 
 # Database
