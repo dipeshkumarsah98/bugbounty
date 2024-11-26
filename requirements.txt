@@ -1,0 +1,6 @@
+django
+djangorestframework
+environs
+psychopg2-binary
+djangorestframework-simplejwt
+python-dotenv
