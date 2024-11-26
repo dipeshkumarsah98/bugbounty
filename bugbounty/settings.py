@@ -19,7 +19,10 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key')
 DEBUG = os.getenv('DEBUG') == 'True'
 
 
-ALLOWED_HOSTS = ["*", ".vercel.app"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1", 
+    ".vercel.app"]
 
 
 print('environment', os.environ.get('DB_PASSWORD'))
