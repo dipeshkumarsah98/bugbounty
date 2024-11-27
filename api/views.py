@@ -8,7 +8,7 @@ from rest_framework import generics, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from .permission import IsClient, IsHunter
 from .models import Bounty, Bug, Skill
 from .serializers import (CustomTokenObtainPairSerializer,
@@ -16,7 +16,7 @@ from .serializers import (CustomTokenObtainPairSerializer,
                           BugSerializer, 
                           UserRegistrationSerializer,
                           OTPVerificationSerializer,
-                          SkillSerializer
+                          SkillSerializer,
                           )
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -147,7 +147,7 @@ class LogoutView(APIView):
 class BountyViewSet(viewsets.ModelViewSet):
     queryset = Bounty.objects.all()
     serializer_class = BountySerializer 
-    permission_classes = [IsAuthenticated, IsClient]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -155,12 +155,12 @@ class BountyViewSet(viewsets.ModelViewSet):
 class BugViewSet(viewsets.ModelViewSet):
     queryset = Bug.objects.all()
     serializer_class = BugSerializer
-    permission_classes = [IsAuthenticated, IsHunter]  # Only hunters can submit bugs
+    permission_classes = [IsAuthenticatedOrReadOnly] 
 
     def perform_create(self, serializer):
         serializer.save(submitted_by=self.request.user)
 
-class SkillViewSet(viewsets.ModelViewSet):
+class SkillViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Skill.objects.all()
     serializer_class = SkillSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]

@@ -12,3 +12,4 @@ sqlparse==0.5.2
 whitenoise==6.8.2
 django-filter==24.3
 django-cors-headers==4.6.0
+drf-yasg==1.21.8

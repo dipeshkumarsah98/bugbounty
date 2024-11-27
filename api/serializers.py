@@ -32,7 +32,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["name"] = user.name
         return data
 
-
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
@@ -57,7 +56,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.otp_created_at = timezone.now()
         user.save()
         return user
-
 
 class OTPVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -89,18 +87,15 @@ class OTPVerificationSerializer(serializers.Serializer):
 
         return user
 
-
 class BountySerializer(serializers.ModelSerializer):
     class Meta:
         model = Bounty
         fields = "__all__"
 
-
 class BugSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bug
         fields = "__all__"
-
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
