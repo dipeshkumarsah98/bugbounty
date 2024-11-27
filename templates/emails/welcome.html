@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to BugBounty Platform</title>
+    <style>
+        /* Inline styles are recommended for email templates */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #e9ecef;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: auto;
+            background-color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        .email-header {
+            background-color: #2a2a2a;
+            padding: 20px;
+            text-align: center;
+            color: #ffffff !important;
+        }
+
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #ffffff !important;
+        }
+
+        .email-body {
+            padding: 30px;
+            color: #343a40;
+            line-height: 1.6;
+        }
+
+        .email-body h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-size: 16px;
+        }
+
+        .email-footer {
+            background-color: #e9ecef;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .email-body {
+                padding: 20px;
+            }
+
+            .email-header h1 {
+                font-size: 22px;
+            }
+
+            .email-body h2 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table role="presentation" class="email-container">
+        <tr>
+            <td class="email-header">
+                <h1>Welcome to BugBounty Platform!</h1>
+            </td>
+        </tr>
+        <tr>
+            <td class="email-body">
+                <h2>Hi {{ user_name }},</h2>
+                <p>We're excited to have you on board. As a {{ user_role }} on our platform, you can:</p>
+                <ul>
+                    <li><strong>Clients:</strong> Post bounties and reward hunters for finding bugs.</li>
+                    <li><strong>Hunters:</strong> Discover and report bugs to earn rewards.</li>
+                </ul>
+                <p>Get started by exploring the platform and engaging with the community.</p>
+                <div style="text-align: center;">
+                    <a href="{{ dashboard_link }}" class="btn">Go to Dashboard</a>
+                </div>
+                <p>If you have any questions, feel free to reach out to our support team.</p>
+                <p>Welcome aboard!</p>
+                <p>Cheers,<br>The BugBounty Team</p>
+            </td>
+        </tr>
+        <tr>
+            <td class="email-footer">
+                &copy; {{ current_year }} BugBounty Platform. All rights reserved.<br>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>
