@@ -32,6 +32,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('client', 'Client'),
     ]
     email = models.EmailField(unique=True)
+    name = models.CharField(max_length=255, blank=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     skills = models.ManyToManyField('Skill', blank=True)
     industry = models.CharField(max_length=255, blank=True)

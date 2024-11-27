@@ -22,6 +22,9 @@ DEBUG = os.getenv('DEBUG') == 'True'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.vercel.app','prod-bugbounty.vercel.app', '.now.sh']
 
+CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'https://prod-bugbounty.vercel.app', 'https://frontend-bugbounty.vercel.app'] 
+CORS_ALLOW_CREDENTIALS = True
+
 # Application definition
 AUTH_USER_MODEL = 'api.User'  
 
@@ -36,27 +39,27 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
     'django_filters',
 ]
 
-
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),  # Adjust as needed
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    'api.authentication.CustomJWTAuthentication',
     ),
-    # Optionally, you can set default permission classes
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
