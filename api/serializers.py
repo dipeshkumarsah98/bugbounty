@@ -6,6 +6,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from .models import  Bounty, Bug, Skill
+from .utils import send_otp_email, send_welcome_email
 
 User = get_user_model()
 
@@ -37,7 +38,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta: 
         model = User
-        fields = ('email', 'role', 'skills', 'industry',  'password')
+        fields = ('email', 'role',  'industry',  'password')
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -47,8 +48,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             is_active=False
         )
         otp = str(random.randint(100000, 999999))
-
-        print(f"{otp=}")
+        send_otp_email(user.email, user.email, otp)
 
         user.otp = otp
         user.otp_created_at = timezone.now()
@@ -80,6 +80,9 @@ class OTPVerificationSerializer(serializers.Serializer):
         user.otp = ''
         user.otp_created_at = None
         user.save()
+        
+        send_welcome_email(user.email, user.email, user.role)
+        
         return user
 
 class BountySerializer(serializers.ModelSerializer):
