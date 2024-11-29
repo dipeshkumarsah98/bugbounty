@@ -53,12 +53,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        if data["role"].lower() == "client":
+        if data["role"].lower() == "hunter":
             data["industry"] = ""
             if not data.get("skills"):
                 raise serializers.ValidationError("Skill set is required for clients")
 
-        if data["role"].lower() == "hunter":
+        if data["role"].lower() == "client":
             data["skills"] = []
             if not data.get("industry"):
                 raise serializers.ValidationError("Industry is required for hunters")
