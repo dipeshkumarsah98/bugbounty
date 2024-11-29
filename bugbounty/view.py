@@ -18,5 +18,6 @@ class APIRootView(APIView):
                 'refresh': reverse('token_refresh', request=request, format=format),
                 'register': reverse('user_registration', request=request, format=format),
                 'logout': reverse('logout', request=request, format=format),
+                'verify-otp': reverse('otp_verification', request=request, format=format),
             },
         })

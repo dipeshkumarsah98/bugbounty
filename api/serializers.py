@@ -4,6 +4,7 @@ from datetime import timedelta
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from django.contrib.auth import get_user_model, authenticate
 from .models import Bounty, Bug, Skill
 from .utils import send_otp_email, send_welcome_email
@@ -35,28 +36,80 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=User.ROLE_CHOICES)
+    email = serializers.EmailField()
 
     class Meta:
         model = User
-        fields = ("name", "email", "role", "industry", "password")
+        fields = ("name", "email", "role", 'skills', "industry", "password")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Remove the UniqueValidator from the email field
+        self.fields['email'].validators = [
+            validator for validator in self.fields['email'].validators
+            if not isinstance(validator, UniqueValidator)
+        ]
+
+    def validate(self, data):
+        if data["role"].lower() == "client":
+            data["industry"] = ""
+            if not data.get("skills"):
+                raise serializers.ValidationError("Skill set is required for clients")
+
+        if data["role"].lower() == "hunter":
+            data["skills"] = []
+            if not data.get("industry"):
+                raise serializers.ValidationError("Industry is required for hunters")
+
+        return data
+
+    def validate_email(self, value):
+        user = User.objects.filter(email=value).first();
+        if user is None:
+            return value
+
+        if user and user.is_active:
+            raise serializers.ValidationError('A user with this email already exists.')
+        return value 
+   
     def create(self, validated_data):
-        user = User.objects.create_user(
-            role=validated_data["role"],
-            email=validated_data["email"],
-            name=validated_data["name"],
-            password=validated_data["password"],
-            industry=validated_data["industry"],
-            is_active=False,
-        )
-        otp = str(random.randint(100000, 999999))
-        send_otp_email(user.email, user.email, otp)
+        email = validated_data['email']
+        user = User.objects.filter(email=email).first()
 
-        user.otp = otp
-        user.otp_created_at = timezone.now()
-        user.save()
-        return user
+        if user:
+            user.otp = str(random.randint(100000, 999999))
+            user.otp_created_at = timezone.now()
+            user.set_password(validated_data['password'])
+            user.role = validated_data['role']
+            user.skills.set(validated_data['skills'])
+            user.name = validated_data['name']
+            user.industry = validated_data['industry']
+            #  skill is missing
+            user.is_active = False  
+            user.save()
 
+            # Resend OTP email
+            send_otp_email(user.email, user.name, user.otp)
+
+            return user
+        else:
+            user = User.objects.create_user(
+                role=validated_data["role"],
+                email=email,
+                name=validated_data["name"],
+                password=validated_data["password"],
+                industry=validated_data["industry"],
+                is_active=False,
+            )
+            user.skills.set(validated_data["skills"])
+            otp = str(random.randint(100000, 999999))
+            send_otp_email(user.email, user.name, otp)
+
+            user.otp = otp
+            user.otp_created_at = timezone.now()
+            user.save()
+            return user
 class OTPVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)

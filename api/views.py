@@ -160,7 +160,7 @@ class BugViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(submitted_by=self.request.user)
 
-class SkillViewSet(viewsets.ReadOnlyModelViewSet):
+class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.all()
     serializer_class = SkillSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
