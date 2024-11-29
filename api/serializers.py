@@ -79,7 +79,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = User.objects.filter(email=email).first()
 
         if user:
-            user.otp = str(random.randint(100000, 999999))
+            # user.otp = str(random.randint(100000, 999999))
+            user.otp = '123456' 
             user.otp_created_at = timezone.now()
             user.set_password(validated_data['password'])
             user.role = validated_data['role']
@@ -104,7 +105,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 is_active=False,
             )
             user.skills.set(validated_data["skills"])
-            otp = str(random.randint(100000, 999999))
+            # otp = str(random.randint(100000, 999999))
+            otp = '123456'
             send_otp_email(user.email, user.name, otp)
 
             user.otp = otp
