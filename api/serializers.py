@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model, authenticate
 from .models import Bounty, Bug, Skill
 from .utils import send_otp_email, send_welcome_email
 
+
 User = get_user_model()
 
 
