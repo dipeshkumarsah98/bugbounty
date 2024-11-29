@@ -10,6 +10,8 @@ class APIRootView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, format=None):
         return Response({
+            'swagger': reverse('schema-swagger-ui', request=request, format=format),
+            'redoc': reverse('schema-redoc', request=request, format=format),
             'skills': reverse('skill-list', request=request, format=format),
             'bounties': reverse('bounty-list', request=request, format=format),
             'bugs': reverse('bug-list', request=request, format=format),

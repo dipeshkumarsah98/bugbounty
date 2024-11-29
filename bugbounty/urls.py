@@ -17,14 +17,13 @@ schema_view = get_schema_view(
    permission_classes=(permissions.AllowAny,),
 )
 
-
-
 router = routers.DefaultRouter()
 router.register(r'skills', SkillViewSet, basename='skill')
 router.register(r'bounties', BountyViewSet, basename='bounty')
 router.register(r'bugs', BugViewSet, basename='bug')
 
 urlpatterns = [
+    path('', APIRootView.as_view(), name='api-list'),
     path('admin/', admin.site.urls),
     path('api/', APIRootView.as_view(), name='api-root'),
     path('api/', include(router.urls)),  
