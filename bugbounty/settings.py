@@ -8,16 +8,10 @@ import logging.config
 
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'default-secret-key')
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG') == 'True'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.vercel.app','prod-bugbounty.vercel.app', '.now.sh']
@@ -25,7 +19,6 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '.vercel.app','prod-bugbounty.vercel.
 CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'https://prod-bugbounty.vercel.app', 'https://frontend-bugbounty.vercel.app'] 
 CORS_ALLOW_CREDENTIALS = True
 
-# Application definition
 AUTH_USER_MODEL = 'api.User'  
 
 INSTALLED_APPS = [
@@ -35,7 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    "whitenoise.runserver_nostatic",
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
@@ -43,6 +36,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     'django_filters',
+    'storages',
 ]
 
 SIMPLE_JWT = {
@@ -76,15 +70,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
-
 
 ROOT_URLCONF = 'bugbounty.urls'
 
@@ -159,9 +144,6 @@ DATABASES = {
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -177,10 +159,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -189,9 +167,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directory where static files will be collected
@@ -203,11 +178,31 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.environ.get('EMAIL_ADDRESS')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+STORAGES = {
+     "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+AWS_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY')
+AWS_SECRET_ACCESS_KEY = os.getenv('S3_SECRET_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+AWS_S3_REGION_NAME = os.getenv('S3_REGION_NAME')
+AWS_S3_ENDPOINT_URL= os.getenv('S3_ENDPOINT_URL')
+# AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+AWS_S3_CUSTOM_DOMAIN = os.getenv('S3_CUSTOM_DOMAIN')
+
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL=None

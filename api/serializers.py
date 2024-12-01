@@ -144,11 +144,14 @@ class OTPVerificationSerializer(serializers.Serializer):
         return user
 
 class BountySerializer(serializers.ModelSerializer):
+    created_by = UserRegistrationSerializer()
     class Meta:
         model = Bounty
         fields = "__all__"
 
 class BugSerializer(serializers.ModelSerializer):
+    related_bounty = BountySerializer()
+    submitted_by = UserRegistrationSerializer()
     class Meta:
         model = Bug
         fields = "__all__"

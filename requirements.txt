@@ -13,3 +13,5 @@ whitenoise==6.8.2
 django-filter==24.3
 django-cors-headers==4.6.0
 drf-yasg==1.21.8
+django-storages==1.14.4
+boto3==1.35.71

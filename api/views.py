@@ -145,7 +145,7 @@ class LogoutView(APIView):
         return response
 
 class BountyViewSet(viewsets.ModelViewSet):
-    queryset = Bounty.objects.all()
+    queryset = Bounty.objects.select_related('created_by').all()
     serializer_class = BountySerializer 
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -153,10 +153,13 @@ class BountyViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
 class BugViewSet(viewsets.ModelViewSet):
-    queryset = Bug.objects.all()
+    queryset = Bug.objects.select_related('related_bounty', 'submitted_by').all()
     serializer_class = BugSerializer
     permission_classes = [IsAuthenticatedOrReadOnly] 
 
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
     def perform_create(self, serializer):
         serializer.save(submitted_by=self.request.user)
 
