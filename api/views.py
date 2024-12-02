@@ -49,8 +49,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             value=access_token,
             expires=timezone.now() + access_token_expiry,
             httponly=True,
-            secure=not settings.DEBUG,
-            samesite='Strict',
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
         )
         
         response.set_cookie(
@@ -58,8 +58,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             value=refresh_token,
             expires=timezone.now() + refresh_token_expiry,
             httponly=True,
-            secure=not settings.DEBUG,
-            samesite='Strict',
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
         )
         
         return response
@@ -92,8 +92,8 @@ class CustomTokenRefreshView(TokenRefreshView):
             value=access_token,
             expires=timezone.now() + access_token_expiry,
             httponly=True,
-            secure=not settings.DEBUG,
-            samesite='Strict',
+            secure=settings.COOKIE_SECURE,
+            samesite=settings.COOKIE_SAMESITE,
         )
 
         return response
@@ -133,13 +133,13 @@ class LogoutView(APIView):
             'access_token',
             path='/',
             domain=None,  
-            samesite='Strict',
+            samesite=settings.COOKIE_SAMESITE,
         )
         response.delete_cookie(
             'refresh_token',
             path='/',
             domain=None,
-            samesite='Strict',
+            samesite=settings.COOKIE_SAMESITE,
         )
 
         return response
