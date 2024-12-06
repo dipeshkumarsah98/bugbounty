@@ -18,7 +18,9 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     ".vercel.app",
+    ".netlify.app",
     "prod-bugbounty.vercel.app",
+    "bug-bounty-projects.netlify.app",
     ".now.sh",
 ]
 
@@ -26,6 +28,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://prod-bugbounty.vercel.app",
     "https://frontend-bugbounty.vercel.app",
+    "https://bug-bounty-projects.netlify.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
