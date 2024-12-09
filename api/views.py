@@ -1,8 +1,10 @@
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.utils import timezone
+from django.db.models import Count
 from rest_framework.response import Response
 from rest_framework import generics, viewsets
 from rest_framework.views import APIView
@@ -10,13 +12,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from .permission import IsClient, IsHunter
-from .models import Bounty, Bug, Skill
-from .serializers import (CustomTokenObtainPairSerializer,
+from .models import Bounty, Bug, Skill, Comment
+from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           BountySerializer, 
+                          BountyDetailSerializer,
                           BugSerializer, 
                           UserRegistrationSerializer,
                           OTPVerificationSerializer,
                           SkillSerializer,
+                          CommentSerializer
                           )
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -145,16 +149,21 @@ class LogoutView(APIView):
         return response
 
 class BountyViewSet(viewsets.ModelViewSet):
-    queryset = Bounty.objects.select_related('created_by').all()
-    serializer_class = BountySerializer 
+    queryset = Bounty.objects.select_related('created_by').annotate(bugs_count=Count('bugs')).all()
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return BountyDetailSerializer
+        return BountySerializer
+    
 class BugViewSet(viewsets.ModelViewSet):
-    queryset = Bug.objects.select_related('related_bounty', 'submitted_by').all()
-    serializer_class = BugSerializer
+    queryset = Bug.objects.select_related('related_bounty', 'submitted_by') \
+                          .annotate(comments_count=Count('comments')) \
+                          .all()
     permission_classes = [IsAuthenticatedOrReadOnly] 
 
     def get_serializer_context(self):
@@ -162,8 +171,33 @@ class BugViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save(submitted_by=self.request.user)
-
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return BugDetailSerializer
+        return BugSerializer
+   
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.all()
     serializer_class = SkillSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+class BugCommentListCreateView(generics.ListCreateAPIView):
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        bug_id = self.kwargs.get('bugid')
+        if not Bug.objects.filter(pk=bug_id).exists():
+            raise NotFound(detail="Bug not found")
+
+        return Comment.objects.prefetch_related('user').filter(bug_id=bug_id).order_by('-created_at')
+    
+    def perform_create(self, serializer):
+        bug_id = self.kwargs.get('bugid')
+        try:
+            bug = Bug.objects.get(pk=bug_id)
+        except Bug.DoesNotExist:
+            raise NotFound(detail="Bug not found")
+
+        serializer.save(bug=bug, user=self.request.user)

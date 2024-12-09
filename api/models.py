@@ -84,6 +84,7 @@ class Bug(models.Model):
     related_bounty = models.ForeignKey(Bounty, on_delete=models.CASCADE, related_name='bugs')
     submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bugs_submitted')
     submitted_at = models.DateTimeField(auto_now_add=True)
+    expected_result = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.title
@@ -101,3 +102,12 @@ class RewardTransaction(models.Model):
 
     def __str__(self):
         return f"{self.transaction_type.capitalize()} - {self.amount} to {self.user.username}"
+
+class Comment(models.Model):
+    bug = models.ForeignKey(Bug, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.user.email} on {self.bug.title}"

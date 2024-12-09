@@ -1,4 +1,3 @@
-import random
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework import serializers
@@ -6,12 +5,10 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth import get_user_model, authenticate
-from .models import Bounty, Bug, Skill
+from .models import Bounty, Bug, Skill, Comment
 from .utils import send_otp_email, send_welcome_email
 
-
 User = get_user_model()
-
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = User.USERNAME_FIELD
@@ -113,6 +110,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             user.otp_created_at = timezone.now()
             user.save()
             return user
+
 class OTPVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=6)
@@ -143,20 +141,57 @@ class OTPVerificationSerializer(serializers.Serializer):
 
         return user
 
+class BugSerializer(serializers.ModelSerializer):
+    submitted_by = UserRegistrationSerializer(read_only=True)
+    comments_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Bug
+        fields = ['id', 'title', 'description', 
+                  'comments_count', 'submitted_by', 
+                  'related_bounty', 'submitted_at', 
+                  'is_accepted', 'attachment', 'guide',
+                  ]
+        read_only_fields = ['submitted_by', 'comments_count']
+
 class BountySerializer(serializers.ModelSerializer):
     created_by = UserRegistrationSerializer(read_only=True)
+    bugs_count = serializers.IntegerField(read_only=True)
     class Meta:
         model = Bounty
         fields = "__all__"
+        read_only_fields = ['created_by', 'bugs']
 
-class BugSerializer(serializers.ModelSerializer):
-    # related_bounty = BountySerializer()
-    submitted_by = UserRegistrationSerializer(read_only=True)
+class BountyDetailSerializer(serializers.ModelSerializer):
+    created_by = UserRegistrationSerializer(read_only=True)
+    bugs = BugSerializer(many=True, read_only=True)
+    bugs_count = serializers.IntegerField(read_only=True)
     class Meta:
-        model = Bug
+        model = Bounty
         fields = "__all__"
+        read_only_fields = ['created_by', 'bugs', 'bugs_count']
 
 class SkillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Skill
         fields = "__all__"
+
+class CommentSerializer(serializers.ModelSerializer):
+    user = UserRegistrationSerializer(read_only=True)
+    class Meta:
+        model = Comment
+        fields = ['id', 'user', 'text', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
+
+class BugDetailSerializer(serializers.ModelSerializer):
+    comments = CommentSerializer(many=True, read_only=True)
+    comments_count = serializers.IntegerField(read_only=True)
+    submitted_by = UserRegistrationSerializer(read_only=True)
+    related_bounty = BountySerializer(read_only=True)
+    class Meta:
+        model = Bug
+        fields = ['id', 'title', 'description', 'comments_count', 
+                  'comments', 'submitted_by', 'related_bounty', 
+                  'submitted_at', 'is_accepted', 'attachment', 'guide'
+                  ]
+        read_only_fields = ['submitted_by', 'comments_count', 'comments', 'related_bounty']
