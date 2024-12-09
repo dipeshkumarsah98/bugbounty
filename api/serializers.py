@@ -150,7 +150,7 @@ class BugSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 
                   'comments_count', 'submitted_by', 
                   'related_bounty', 'submitted_at', 
-                  'is_accepted', 'attachment', 'guide',
+                  'is_accepted', 'attachment', 'guide', 'expected_result',
                   ]
         read_only_fields = ['submitted_by', 'comments_count']
 
@@ -192,6 +192,6 @@ class BugDetailSerializer(serializers.ModelSerializer):
         model = Bug
         fields = ['id', 'title', 'description', 'comments_count', 
                   'comments', 'submitted_by', 'related_bounty', 
-                  'submitted_at', 'is_accepted', 'attachment', 'guide'
+                  'submitted_at', 'is_accepted', 'attachment', 'guide', 'expected_result',
                   ]
         read_only_fields = ['submitted_by', 'comments_count', 'comments', 'related_bounty']
