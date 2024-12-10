@@ -144,6 +144,8 @@ class OTPVerificationSerializer(serializers.Serializer):
 class BugSerializer(serializers.ModelSerializer):
     submitted_by = UserRegistrationSerializer(read_only=True)
     comments_count = serializers.IntegerField(read_only=True)
+    title = serializers.ReadOnlyField(source='related_bounty.title')
+    description = serializers.ReadOnlyField(source='related_bounty.description')
 
     class Meta:
         model = Bug
@@ -188,6 +190,8 @@ class BugDetailSerializer(serializers.ModelSerializer):
     comments_count = serializers.IntegerField(read_only=True)
     submitted_by = UserRegistrationSerializer(read_only=True)
     related_bounty = BountySerializer(read_only=True)
+    title = serializers.ReadOnlyField(source='related_bounty.title')
+    description = serializers.ReadOnlyField(source='related_bounty.description')
     class Meta:
         model = Bug
         fields = ['id', 'title', 'description', 'comments_count', 

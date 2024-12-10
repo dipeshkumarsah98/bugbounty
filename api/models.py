@@ -75,9 +75,7 @@ class Bounty(models.Model):
         return self.title
 
 class Bug(models.Model):
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    guide = models.TextField(blank=True)
+    guide = models.TextField(blank=True, null=True)
     attachment = models.FileField(upload_to='bugs/', blank=True, null=True)
     is_accepted = models.BooleanField(default=False)
     related_bounty = models.ForeignKey(Bounty, on_delete=models.CASCADE, related_name='bugs')

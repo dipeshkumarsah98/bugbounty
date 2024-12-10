@@ -10,8 +10,7 @@ class BountyAdmin(admin.ModelAdmin):
 
 @admin.register(Bug)
 class BugAdmin(admin.ModelAdmin):
-    list_display = ['title', 'description', 'guide']
-    search_fields = ['title', 'description']
+    list_display = ['guide']
     list_filter = ['submitted_at']
 
 @admin.register(Skill)
