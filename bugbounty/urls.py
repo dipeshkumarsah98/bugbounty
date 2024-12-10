@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView
+from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView, BugStatusView, RewardTransactionViewSet
 from .view import APIRootView
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -21,6 +21,7 @@ router = routers.DefaultRouter()
 router.register(r'skills', SkillViewSet, basename='skill')
 router.register(r'bounties', BountyViewSet, basename='bounty')
 router.register(r'bugs', BugViewSet, basename='bug')
+router.register(r'rewards', RewardTransactionViewSet, basename='reward')
 
 urlpatterns = [
     path('', APIRootView.as_view(), name='api-list'),
@@ -29,6 +30,7 @@ urlpatterns = [
     path('api/', include(router.urls)),  
     path('api/auth/', include('api.urls')),  
     path('api/bugs/<int:bugid>/comments', BugCommentListCreateView.as_view(), name='bug-comments-list-create'),
+    path('api/bugs/<int:bugid>/status', BugStatusView.as_view(), name='bug-status-create'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]

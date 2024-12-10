@@ -6,21 +6,22 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models import Count
 from rest_framework.response import Response
-from rest_framework import generics, viewsets
+from rest_framework import generics, viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from django.db import DatabaseError, transaction
 from .permission import IsClient, IsHunter
-from .models import Bounty, Bug, Skill, Comment
+from .models import Bounty, Bug, Skill, Comment, RewardTransaction
 from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           BountySerializer, 
                           BountyDetailSerializer,
-                          BugSerializer, 
+                          BugSerializer, RewardTransactionSerializer, 
                           UserRegistrationSerializer,
                           OTPVerificationSerializer,
                           SkillSerializer,
-                          CommentSerializer
+                          CommentSerializer,
+                          BugStatusSerializer,
                           )
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -201,3 +202,92 @@ class BugCommentListCreateView(generics.ListCreateAPIView):
             raise NotFound(detail="Bug not found")
 
         serializer.save(bug=bug, user=self.request.user)
+
+class BugStatusView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated, IsClient]
+    serializer_class = BugStatusSerializer
+
+    def post(self, request, *args, **kwargs):
+        bug_id = self.kwargs.get('bugid')
+        try:
+            bug = Bug.objects.get(pk=bug_id)
+        except Bug.DoesNotExist:
+            raise NotFound(detail="Bug not found")
+        
+        if bug.status == 'pending':
+            try:
+                bounty = Bounty.objects.get(pk=bug.related_bounty_id)
+            except Bounty.DoesNotExist:
+                raise NotFound(detail="Bounty not found")
+
+            if bounty.created_by != request.user:
+                return Response({'detail': 'You do not have permission to change the status of this bug'}, status=status.HTTP_403_FORBIDDEN)
+            
+            new_status = request.data.get('status')
+
+            if new_status not in ['Accepted', 'Rejected', 'Pending']:
+                return Response({'detail': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if new_status.lower() == 'accepted':
+                if bug.is_accepted:
+                    return Response({'detail': 'Bug already accepted'}, status=status.HTTP_400_BAD_REQUEST)
+                try:
+                    with transaction.atomic():
+                        bug.is_accepted = True
+                        bug.status = new_status.lower()
+                        bug.save()
+                        #  Reward the hunter
+                        reward_transaction = RewardTransaction.objects.create(
+                            user=bug.submitted_by,
+                            amount=bounty.rewarded_amount,
+                            transaction_type='credit',
+                            created_by=request.user,
+                        )
+                        reward_transaction.save()
+                        # Send email to the hunter
+                        # send_reward_email(bug.submitted_by.email, bounty.rewarded_amount)
+                        # transaction.on_commit(lambda: send_reward_email(bug.submitted_by.email, bounty.rewarded_amount))
+
+                except DatabaseError:
+                    bug.is_accepted = False
+                    bug.status = 'pending'
+                    bug.save()
+
+                    return Response({'detail': 'Error occurred while updating bug status'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                return Response({'detail': 'Bug status updated successfully'}, status=status.HTTP_200_OK)
+            
+            if new_status.lower() == 'rejected':
+                if bug.status == 'rejected':
+                    return Response({'detail': 'Bug already rejected'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                if bug.is_accepted:
+                    return Response({'detail': 'Cannot reject bug when it is once accepted'}, status=status.HTTP_400_BAD_REQUEST)
+
+                try:
+                    with transaction.atomic():
+                        bug.is_accepted = False
+                        bug.status = new_status.lower()
+                        bug.save()
+
+                    #  send email to the hunter that the bug is rejected
+                    # send_rejection_email(bug.submitted_by.email, bugId)
+                except DatabaseError:
+                    return Response({'detail': 'Error occurred while updating bug status'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                return Response({'detail': 'Bug status updated successfully'}, status=status.HTTP_200_OK)
+            
+            bug.status = new_status.lower()
+            bug.save()
+
+            return Response({'detail': 'Bug status updated successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Cannot change status of a bug that is already accepted or rejected'}, status=status.HTTP_400_BAD_REQUEST)
+
+class RewardTransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = RewardTransaction.objects.all()
+    serializer_class = RewardTransactionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return RewardTransaction.objects.filter(user=self.request.user)

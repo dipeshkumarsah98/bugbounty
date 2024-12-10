@@ -15,6 +15,7 @@ class APIRootView(APIView):
             'skills': reverse('skill-list', request=request, format=format),
             'bounties': reverse('bounty-list', request=request, format=format),
             'bugs': reverse('bug-list', request=request, format=format),
+            'rewards': reverse('reward-list', request=request, format=format),
             'auth': {
                 'login': reverse('token_obtain_pair', request=request, format=format),
                 'refresh': reverse('token_refresh', request=request, format=format),

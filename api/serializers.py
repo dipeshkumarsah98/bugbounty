@@ -5,7 +5,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth import get_user_model, authenticate
-from .models import Bounty, Bug, Skill, Comment
+from .models import Bounty, Bug, Skill, Comment, RewardTransaction
 from .utils import send_otp_email, send_welcome_email
 
 User = get_user_model()
@@ -151,7 +151,7 @@ class BugSerializer(serializers.ModelSerializer):
         model = Bug
         fields = ['id', 'title', 'description', 
                   'comments_count', 'submitted_by', 
-                  'related_bounty', 'submitted_at', 
+                  'related_bounty', 'submitted_at', 'status',
                   'is_accepted', 'attachment', 'guide', 'expected_result',
                   ]
         read_only_fields = ['submitted_by', 'comments_count']
@@ -195,7 +195,23 @@ class BugDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bug
         fields = ['id', 'title', 'description', 'comments_count', 
-                  'comments', 'submitted_by', 'related_bounty', 
+                  'comments', 'submitted_by', 'related_bounty', 'status',
                   'submitted_at', 'is_accepted', 'attachment', 'guide', 'expected_result',
                   ]
         read_only_fields = ['submitted_by', 'comments_count', 'comments', 'related_bounty']
+
+class BugStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=Bug.STATUS_CHOICES)
+
+    class Meta:
+        model = Bug
+        fields = ['id', 'status']
+
+class RewardTransactionSerializer(serializers.ModelSerializer):
+    created_by = UserRegistrationSerializer(read_only=True)
+    total_rewards = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    current_balance = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    class Meta:
+        model = RewardTransaction
+        fields = "__all__"
+        read_only_fields = ['created_by']
