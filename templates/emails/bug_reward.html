@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Bug Accepted</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: auto;
+            background-color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+
+        .email-header {
+            background-color: #2a2a2a;
+            padding: 20px;
+            text-align: center;
+            color: #ffffff !important;
+        }
+
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #ffffff !important;
+        }
+
+        .email-body {
+            padding: 30px;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        .email-body h2 {
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+
+        .reward-amount {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2a2a2a;
+            color: #ffffff;
+            font-size: 18px;
+            margin: 20px 0;
+            text-decoration: none;
+        }
+
+        .email-footer {
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+            color: #777777;
+            font-size: 12px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .email-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table role="presentation" class="email-container">
+        <tr>
+            <td class="email-header">
+                <h1>BugBounty Platform</h1>
+            </td>
+        </tr>
+        <tr>
+            <td class="email-body">
+                <h2>Hello {{ user_name }},</h2>
+                <p>Great news! The bug you submitted, <strong>{{ bug_title }}</strong>, has been reviewed and accepted
+                    by our team.</p>
+                <p>As a result, you have been rewarded with the following amount:</p>
+                <div style="text-align: center;">
+                    <span class="reward-amount">{{ rewarded_amount }} xlop tokens</span>
+                </div>
+                <p>Thank you for helping us improve our platform’s security and reliability. Your contribution is highly
+                    valued.</p>
+                <p>Best regards,<br>The BugBounty Team</p>
+            </td>
+        </tr>
+        <tr>
+            <td class="email-footer">
+                &copy; {{ current_year }} BugBounty Platform. All rights reserved.
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Bug Rejected</title>
+    <title>Withdrawal Confirmation</title>
     <style>
         body {
             margin: 0;
@@ -47,6 +47,16 @@
             margin-bottom: 20px;
         }
 
+        .withdraw-info {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2a2a2a;
+            color: #ffffff;
+            font-size: 18px;
+            margin: 20px 0;
+            text-decoration: none;
+        }
+
         .email-footer {
             background-color: #f4f4f4;
             padding: 20px;
@@ -73,14 +83,14 @@
         <tr>
             <td class="email-body">
                 <h2>Hello {{ user_name }},</h2>
-                <p>We have reviewed the bug you submitted: <strong>{{ bug_title }}</strong>. After careful
-                    consideration, we regret to inform you that your submission does not meet our criteria for
-                    acceptance.</p>
-                <p>This could be due to various reasons: the bug may not be reproducible, may not be considered a
-                    security issue, or may have been previously reported.</p>
-                <p>We appreciate your effort and encourage you to continue looking for vulnerabilities in our platform.
-                    Your participation helps us maintain a secure environment.</p>
-                <p>If you have any questions, feel free to reach out to our support team.</p>
+                <p>Your withdrawal request has been processed successfully!</p>
+                <p>The following amount has been sent to your wallet:</p>
+                <div style="text-align: center;">
+                    <span class="withdraw-info">{{ amount }} xlop tokens</span>
+                </div>
+                <p>Your transaction ID is <strong>{{ transaction_id }}</strong>. Please keep this for your records.</p>
+                <p>If you have any questions or concerns, feel free to reach out to our support team.</p>
+                <p>Thank you for using our platform!</p>
                 <p>Best regards,<br>The BugBounty Team</p>
             </td>
         </tr>

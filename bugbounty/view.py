@@ -16,6 +16,7 @@ class APIRootView(APIView):
             'bounties': reverse('bounty-list', request=request, format=format),
             'bugs': reverse('bug-list', request=request, format=format),
             'rewards': reverse('reward-list', request=request, format=format),
+            'withdraw': reverse('withdraw-list', request=request, format=format),
             'auth': {
                 'login': reverse('token_obtain_pair', request=request, format=format),
                 'refresh': reverse('token_refresh', request=request, format=format),

@@ -212,7 +212,7 @@ class RewardTransactionSerializer(serializers.ModelSerializer):
     created_by = serializers.ReadOnlyField(source='created_by.email')
     class Meta:
         model = RewardTransaction
-        fields = ['id', 'user', 'amount', 'transaction_type', 'created_at', 'created_by']
+        fields = ['id', 'user', 'amount', 'transaction_type', 'created_at', 'created_by', 'note']
         read_only_fields = ['created_by', 'user']
 
 class RewardSummarySerializer(serializers.Serializer):

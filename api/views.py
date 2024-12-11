@@ -5,16 +5,18 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.utils import timezone
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from rest_framework.response import Response
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+import logging
 from django.db import DatabaseError, transaction
 from .permission import IsClient, IsHunter
 from .models import Bounty, Bug, Skill, Comment, RewardTransaction
+from .utils import get_user_balance, send_bug_rejected_email, send_reward_email, send_withdrawal_email
 from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           BountySerializer, 
                           BountyDetailSerializer,
@@ -25,6 +27,8 @@ from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           CommentSerializer,
                           BugStatusSerializer,
                           )
+
+logger = logging.getLogger(__name__)
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -247,18 +251,20 @@ class BugStatusView(generics.CreateAPIView):
                             amount=bounty.rewarded_amount,
                             transaction_type='credit',
                             created_by=request.user,
+                            note=f"Bug Bounty Reward - {bounty.severity} issue"
                         )
                         reward_transaction.save()
-                        # TODO: Send email to the hunter
-                        # TODO: send_reward_email(bug.submitted_by.email, bounty.rewarded_amount)
-                        # transaction.on_commit(lambda: send_reward_email(bug.submitted_by.email, bounty.rewarded_amount))
 
-                except DatabaseError:
+                except DatabaseError as e:
                     bug.is_accepted = False
                     bug.status = 'pending'
                     bug.save()
 
+                    logging.error(f"Error occurred while updating bug status: {e}")
+
                     return Response({'detail': 'Error occurred while updating bug status'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                send_reward_email(bug.submitted_by.email, bug.submitted_by.name, bounty.rewarded_amount, bug.related_bounty.title)
 
                 return Response({'detail': 'Bug status updated successfully'}, status=status.HTTP_200_OK)
             
@@ -275,10 +281,11 @@ class BugStatusView(generics.CreateAPIView):
                         bug.status = new_status.lower()
                         bug.save()
 
-                    #  send email to the hunter that the bug is rejected
-                    # send_rejection_email(bug.submitted_by.email, bugId)
-                except DatabaseError:
+                except DatabaseError as e:
+                    logging.error(f"Error occurred while updating bug status: {e}")
                     return Response({'detail': 'Error occurred while updating bug status'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                send_bug_rejected_email(bug.submitted_by.email, bug.submitted_by.name, bug.related_bounty.title) 
 
                 return Response({'detail': 'Bug status updated successfully'}, status=status.HTTP_200_OK)
             
@@ -293,7 +300,7 @@ class RewardTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return RewardTransaction.objects.filter(user=self.request.user)
+        return RewardTransaction.objects.filter(user=self.request.user).order_by('-created_at')
 
     def get_serializer_class(self):
         return RewardTransactionSerializer
@@ -302,21 +309,59 @@ class RewardTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     def summary(self, request):
         user = request.user
         # calculate total credits and total debits
-        credits = RewardTransaction.objects.filter(user=user, transaction_type='credit') \
-                                            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
-        debits = RewardTransaction.objects.filter(user=user, transaction_type='debit') \
-                                            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
-        total_rewards = credits
-        current_reward = credits - debits
+        data = get_user_balance(user)
         
         trans = RewardTransaction.objects.filter(user=user).order_by('-created_at')
-        print("trans: {trans}")
         serializer = RewardSummarySerializer({
-            'current_reward': current_reward,
-            'total_reward': total_rewards,
+            'current_reward': data.get("balance"),
+            'total_reward': data.get("total_credits"),
             'transactions': trans
         })
 
         return Response(serializer.data)
+class WithdrawRewardViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['post']
+
+    def create(self, request):
+        amount_str = request.data.get('amount')
+        if not amount_str:
+            return Response({'detail': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            amount = Decimal(amount_str)
+        except (ValueError, TypeError):
+            return Response({'detail': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if amount <= 0:
+            return Response({'detail': 'Amount must be greater than 0'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        current_reward = get_user_balance(user).get('balance', Decimal('0'))
+
+        if amount > current_reward:
+            return Response({'detail': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                transaction_obj = RewardTransaction.objects.create(
+                    user=user,
+                    amount=amount,
+                    transaction_type='debit',
+                    created_by=user,
+                    note='Withdrawal to Wallet'  
+                )
+        except DatabaseError as e:
+            logging.error(f"Error occurred while processing withdrawal: {e}") 
+            return Response({'detail': 'Error occurred while processing withdrawal'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Return updated balance or transaction details
+        updated_balance = get_user_balance(user).get('balance', Decimal('0'))
+
+        send_withdrawal_email(user.email, user.name, int(amount), transaction_obj.id)
+
+        return Response({
+            'detail': 'Withdrawal processed successfully',
+            'new_balance': str(updated_balance),
+            'transaction_id': transaction_obj.id
+        }, status=status.HTTP_200_OK)

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView, BugStatusView, RewardTransactionViewSet
+from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView, BugStatusView, RewardTransactionViewSet, WithdrawRewardViewSet
 from .view import APIRootView
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -22,6 +22,7 @@ router.register(r'skills', SkillViewSet, basename='skill')
 router.register(r'bounties', BountyViewSet, basename='bounty')
 router.register(r'bugs', BugViewSet, basename='bug')
 router.register(r'rewards', RewardTransactionViewSet, basename='reward')
+router.register(r'withdraw', WithdrawRewardViewSet, basename='withdraw')
 
 urlpatterns = [
     path('', APIRootView.as_view(), name='api-list'),
