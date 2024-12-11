@@ -124,7 +124,7 @@ logging.config.dictConfig(
         "loggers": {
             # default for all undefined Python modules
             "": {
-                "level": "WARNING",
+                "level": LOGLEVEL,
                 "handlers": ["console"],
             },
             # Our application code

@@ -206,6 +206,7 @@ class BugCommentListCreateView(generics.ListCreateAPIView):
         try:
             bug = Bug.objects.get(pk=bug_id)
         except Bug.DoesNotExist:
+            logger.error(f"Bug {bug_id} not found")
             raise NotFound(detail="Bug not found")
 
         serializer.save(bug=bug, user=self.request.user)
@@ -215,6 +216,7 @@ class BugStatusView(generics.CreateAPIView):
     serializer_class = BugStatusSerializer
 
     def post(self, request, *args, **kwargs):
+        user = request.user
         bug_id = self.kwargs.get('bugid')
         try:
             bug = Bug.objects.get(pk=bug_id)
@@ -227,7 +229,7 @@ class BugStatusView(generics.CreateAPIView):
             except Bounty.DoesNotExist:
                 raise NotFound(detail="Bounty not found")
 
-            if bounty.created_by != request.user:
+            if bounty.created_by != user:
                 return Response({'detail': 'You do not have permission to change the status of this bug'}, status=status.HTTP_403_FORBIDDEN)
             
             new_status = request.data.get('status')
@@ -265,6 +267,7 @@ class BugStatusView(generics.CreateAPIView):
                     return Response({'detail': 'Error occurred while updating bug status'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
                 send_reward_email(bug.submitted_by.email, bug.submitted_by.name, bounty.rewarded_amount, bug.related_bounty.title)
+                logger.info(f"User {user.email} accepted bug {bug.id} and rewarded {bounty.rewarded_amount} to hunter {bug.submitted_by.email}")
 
                 return Response({'detail': 'Bug status updated successfully'}, status=status.HTTP_200_OK)
             
@@ -291,9 +294,10 @@ class BugStatusView(generics.CreateAPIView):
             
             bug.status = new_status.lower()
             bug.save()
-
+            logger.info(f"User {user.email} updated status of bug {bug.id} to {new_status}")
             return Response({'detail': 'Bug status updated successfully'}, status=status.HTTP_200_OK)
         else:
+            logger.warning(f"User {user.email} Cannot change status of a bug, it's current status is {bug.status}")
             return Response({'detail': 'Cannot change status of a bug that is already accepted or rejected'}, status=status.HTTP_400_BAD_REQUEST)
 
 class RewardTransactionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -340,6 +344,7 @@ class WithdrawRewardViewSet(viewsets.ViewSet):
         current_reward = get_user_balance(user).get('balance', Decimal('0'))
 
         if amount > current_reward:
+            logger.info(f"User {user.email} requested withdrawal of {amount} but has only {current_reward} in balance")
             return Response({'detail': 'Insufficient balance'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -357,6 +362,8 @@ class WithdrawRewardViewSet(viewsets.ViewSet):
 
         # Return updated balance or transaction details
         updated_balance = get_user_balance(user).get('balance', Decimal('0'))
+
+        logger.info(f"User {user.email} requested withdrawal of {amount} and transaction id is {transaction_obj.id}")
 
         send_withdrawal_email(user.email, user.name, int(amount), transaction_obj.id)
 
