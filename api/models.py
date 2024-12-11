@@ -96,11 +96,12 @@ class RewardTransaction(models.Model):
         ('credit', 'Credit'),
         ('debit', 'Debit'),
     ]
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reward_transactions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reward_transactions', blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     transaction_type = models.CharField(max_length=6, choices=TRANSACTION_TYPE_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='transactions_created')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='transactions_created', blank=True, null=True)
+    note = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.transaction_type.capitalize()} - {self.amount} to {self.user.username}"
