@@ -1,12 +1,14 @@
+from decimal import Decimal
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, Sum
 from rest_framework.response import Response
 from rest_framework import generics, viewsets, status
+from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
@@ -16,7 +18,7 @@ from .models import Bounty, Bug, Skill, Comment, RewardTransaction
 from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           BountySerializer, 
                           BountyDetailSerializer,
-                          BugSerializer, RewardTransactionSerializer, 
+                          BugSerializer, RewardSummarySerializer, RewardTransactionSerializer,
                           UserRegistrationSerializer,
                           OTPVerificationSerializer,
                           SkillSerializer,
@@ -115,6 +117,7 @@ class OTPVerificationView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            # TODO: Should load 5000 balance to the client account after verification
             return Response({'detail': 'Account verified successfully'}, status=status.HTTP_200_OK)
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -237,6 +240,8 @@ class BugStatusView(generics.CreateAPIView):
                         bug.status = new_status.lower()
                         bug.save()
                         #  Reward the hunter
+
+                        # TODO: Balance should be reduced from the client account
                         reward_transaction = RewardTransaction.objects.create(
                             user=bug.submitted_by,
                             amount=bounty.rewarded_amount,
@@ -244,8 +249,8 @@ class BugStatusView(generics.CreateAPIView):
                             created_by=request.user,
                         )
                         reward_transaction.save()
-                        # Send email to the hunter
-                        # send_reward_email(bug.submitted_by.email, bounty.rewarded_amount)
+                        # TODO: Send email to the hunter
+                        # TODO: send_reward_email(bug.submitted_by.email, bounty.rewarded_amount)
                         # transaction.on_commit(lambda: send_reward_email(bug.submitted_by.email, bounty.rewarded_amount))
 
                 except DatabaseError:
@@ -285,9 +290,34 @@ class BugStatusView(generics.CreateAPIView):
             return Response({'detail': 'Cannot change status of a bug that is already accepted or rejected'}, status=status.HTTP_400_BAD_REQUEST)
 
 class RewardTransactionViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = RewardTransaction.objects.all()
-    serializer_class = RewardTransactionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return RewardTransaction.objects.filter(user=self.request.user)
+
+    def get_serializer_class(self):
+        return RewardTransactionSerializer
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        user = request.user
+        
+        # calculate total credits and total debits
+        credits = RewardTransaction.objects.filter(user=user, transaction_type='credit') \
+                                            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+        debits = RewardTransaction.objects.filter(user=user, transaction_type='debit') \
+                                            .aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+        total_rewards = credits
+        current_reward = credits - debits
+        
+        trans = RewardTransaction.objects.filter(user=user).order_by('-created_at')
+        print("trans: {trans}")
+        serializer = RewardSummarySerializer({
+            'current_reward': current_reward,
+            'total_reward': total_rewards,
+            'transactions': trans
+        })
+
+        return Response(serializer.data)

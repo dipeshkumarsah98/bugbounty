@@ -62,7 +62,6 @@ class Bounty(models.Model):
     ]
     title = models.CharField(max_length=255)
     description = models.TextField()
-    step_to_reproduce  = models.TextField(blank=True, null=True)
     acceptance_criteria = models.TextField(blank=True, null=True)
     expiry_date = models.DateTimeField()
     attachments = models.FileField(upload_to='bounties/', blank=True, null=True)

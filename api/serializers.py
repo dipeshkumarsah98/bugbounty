@@ -208,10 +208,14 @@ class BugStatusSerializer(serializers.Serializer):
         fields = ['id', 'status']
 
 class RewardTransactionSerializer(serializers.ModelSerializer):
-    created_by = UserRegistrationSerializer(read_only=True)
-    total_rewards = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    current_balance = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    user = serializers.ReadOnlyField(source='user.email')
+    created_by = serializers.ReadOnlyField(source='created_by.email')
     class Meta:
         model = RewardTransaction
-        fields = "__all__"
-        read_only_fields = ['created_by']
+        fields = ['id', 'user', 'amount', 'transaction_type', 'created_at', 'created_by']
+        read_only_fields = ['created_by', 'user']
+
+class RewardSummarySerializer(serializers.Serializer):
+    current_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
+    transactions = RewardTransactionSerializer(many=True)
