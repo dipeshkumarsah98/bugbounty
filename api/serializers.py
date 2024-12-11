@@ -154,7 +154,7 @@ class BugSerializer(serializers.ModelSerializer):
                   'related_bounty', 'submitted_at', 'status',
                   'is_accepted', 'attachment', 'guide', 'expected_result',
                   ]
-        read_only_fields = ['submitted_by', 'comments_count']
+        read_only_fields = ['submitted_by', 'comments_count','is_accepted', 'status']
 
 class BountySerializer(serializers.ModelSerializer):
     created_by = UserRegistrationSerializer(read_only=True)
@@ -198,7 +198,7 @@ class BugDetailSerializer(serializers.ModelSerializer):
                   'comments', 'submitted_by', 'related_bounty', 'status',
                   'submitted_at', 'is_accepted', 'attachment', 'guide', 'expected_result',
                   ]
-        read_only_fields = ['submitted_by', 'comments_count', 'comments', 'related_bounty']
+        read_only_fields = ['submitted_by', 'comments_count', 'comments', 'related_bounty', 'is_accepted', 'status']
 
 class BugStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Bug.STATUS_CHOICES)

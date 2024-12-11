@@ -153,7 +153,7 @@ class LogoutView(APIView):
         return response
 
 class BountyViewSet(viewsets.ModelViewSet):
-    queryset = Bounty.objects.select_related('created_by').annotate(bugs_count=Count('bugs')).all()
+    queryset = Bounty.objects.select_related('created_by').annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsClient]
 
     def perform_create(self, serializer):
@@ -167,7 +167,7 @@ class BountyViewSet(viewsets.ModelViewSet):
 class BugViewSet(viewsets.ModelViewSet):
     queryset = Bug.objects.select_related('related_bounty', 'submitted_by') \
                           .annotate(comments_count=Count('comments')) \
-                          .all()
+                          .order_by('-submitted_at').all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsHunter] 
 
     def get_serializer_context(self):
@@ -301,7 +301,6 @@ class RewardTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def summary(self, request):
         user = request.user
-        
         # calculate total credits and total debits
         credits = RewardTransaction.objects.filter(user=user, transaction_type='credit') \
                                             .aggregate(total=Sum('amount'))['total'] or Decimal('0')
