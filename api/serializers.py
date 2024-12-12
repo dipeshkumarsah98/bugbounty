@@ -226,3 +226,19 @@ class RewardSummarySerializer(serializers.Serializer):
     current_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
     transactions = RewardTransactionSerializer(many=True)
+
+class TopHunterSerializer(serializers.Serializer):
+    hunter_name = serializers.CharField(max_length=255)
+    net_reward = serializers.CharField(max_length=50)  # or DecimalField if preferred
+
+class PerformanceInsightSerializer(serializers.Serializer):
+    total_bug_approved = serializers.IntegerField()
+    response_time = serializers.CharField(max_length=50, allow_null=True)
+    average_security = serializers.FloatField(allow_null=True)
+
+class DashboardSerializer(serializers.Serializer):
+    active_bounties = serializers.IntegerField()
+    my_token = serializers.CharField()
+    top_hunter_of_the_month = TopHunterSerializer(allow_null=True)
+    recent_activities = serializers.ListField(child=serializers.CharField(max_length=255))
+    performance_insight = PerformanceInsightSerializer()

@@ -87,6 +87,7 @@ class Bug(models.Model):
     submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bugs_submitted')
     submitted_at = models.DateTimeField(auto_now_add=True)
     expected_result = models.TextField(blank=True, null=True)
+    approved_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return self.title

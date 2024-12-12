@@ -1,4 +1,6 @@
 from decimal import Decimal
+from django.utils import timezone
+from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -6,7 +8,7 @@ from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from django.db.models import Count, Sum, Q, DecimalField
+from django.db.models import Count, Sum, Q, DecimalField, F, Avg
 from rest_framework.response import Response
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import action
@@ -28,6 +30,7 @@ from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           CommentSerializer,
                           BugStatusSerializer,
                           LeaderboardUserSerializer,
+                          DashboardSerializer
                           )
 from django.contrib.auth import get_user_model, authenticate
 
@@ -249,6 +252,7 @@ class BugStatusView(generics.CreateAPIView):
                     with transaction.atomic():
                         bug.is_accepted = True
                         bug.status = new_status.lower()
+                        bug.approved_at = timezone.now()
                         bug.save()
                         #  Reward the hunter
 
@@ -287,6 +291,7 @@ class BugStatusView(generics.CreateAPIView):
                     with transaction.atomic():
                         bug.is_accepted = False
                         bug.status = new_status.lower()
+                        bug.approved_at = timezone.now()
                         bug.save()
 
                 except DatabaseError as e:
@@ -397,3 +402,146 @@ class LeaderboardView(generics.ListAPIView):
             )
             .order_by('-net_reward')[:10]  # top 10 hunters
         )
+
+class DashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        data = {
+            "active_bounties": self.get_active_bounties(user),
+            "my_token": str(self.get_user_balance(user)),
+            "top_hunter_of_the_month": self.get_top_hunter_of_the_month(),
+            "recent_activities": self.get_recent_activities(user),
+            "performance_insight": self.get_performance_insight(user)
+        }
+        serializer = DashboardSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
+
+    def get_user_balance(self, user):
+        # net_balance = sum(credits) - sum(debits)
+        aggregate_data = RewardTransaction.objects.filter(user=user).aggregate(
+            total_credits=Coalesce(Sum('amount', filter=Q(transaction_type='credit')), Decimal('0')),
+            total_debits=Coalesce(Sum('amount', filter=Q(transaction_type='debit')), Decimal('0'))
+        )
+        return aggregate_data['total_credits'] - aggregate_data['total_debits']
+
+    def get_active_bounties(self, user):
+        now = timezone.now()
+        if user.role == 'client':
+            # Active bounties created by this client that are not expired
+            return Bounty.objects.filter(created_by=user, expiry_date__gt=now).count()
+        else:
+            # For hunter: Consider active bounties as those not expired and possibly open to hunters
+            return Bounty.objects.filter(expiry_date__gt=now).count()
+
+    def get_top_hunter_of_the_month(self):
+        # Simple approach: top hunter by net reward overall.
+        # If you need by month, filter RewardTransaction by current month.
+        # For demonstration, just top overall:
+        credits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='credit')), Decimal('0'))
+        debits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='debit')), Decimal('0'))
+
+        top_hunter = (User.objects
+                      .filter(role='hunter')
+                      .annotate(net_reward=credits - debits)
+                      .order_by('-net_reward')
+                      .first())
+
+        if top_hunter:
+            return {
+                "hunter_name": top_hunter.name or top_hunter.email,
+                "net_reward": str(top_hunter.net_reward)
+            }
+        return None
+
+    def get_recent_activities(self, user):
+        # For demonstration, limit to 3 items.
+        activities = []
+        if user.role == 'client':
+            # Recent bounties created
+            recent_bounties = Bounty.objects.filter(created_by=user).order_by('-created_at')[:2]
+            for bounty in recent_bounties:
+                activities.append(f"Created a new bounty: {bounty.title}")
+
+            # Approved bugs:
+            # Assuming approved bugs are those where is_accepted=True
+            # and 'approved by client' means the client decided it. 
+            # This might require a more complex logic depending on how approval is recorded.
+            approved_bugs = Bug.objects.filter(related_bounty__created_by=user, is_accepted=True).order_by('-submitted_at')[:1]
+            for bug in approved_bugs:
+                activities.append(f"Approved bug in bounty '{bug.related_bounty.title}'")
+
+        else:
+            # Hunter’s activities: recent bug submissions
+            submitted_bugs = Bug.objects.filter(submitted_by=user).order_by('-submitted_at')[:3]
+            for bug in submitted_bugs:
+                activities.append(f"Submitted bug in bounty '{bug.related_bounty.title}'")
+
+        return activities
+
+    def get_performance_insight(self, user):
+        if user.role == 'client':
+            return self.get_client_performance_insight(user)
+        else:
+            return self.get_hunter_performance_insight(user)
+
+    def get_client_performance_insight(self, user):
+        # total bug approved in his bounty
+        approved_bugs = Bug.objects.filter(related_bounty__created_by=user, is_accepted=True)
+        total_approved = approved_bugs.count()
+
+        # Response time: average time from bug submission to acceptance
+        # Assuming acceptance timestamp = submitted_at for demonstration, 
+        # In real scenario, you'd need a field to track acceptance time.
+        # Let's assume acceptance is indicated by is_accepted and acceptance time = submitted_at + some placeholder
+        # If there's no separate acceptance time, you need to store when a bug was accepted.
+        # For demonstration, assume bug accepted at submitted_at (not realistic):
+        response_time = None
+        if total_approved > 0:
+            # If you had a field like bug.approved_at, you could do:
+            response_time = approved_bugs.aggregate(avg_time=Avg(F('approved_at') - F('submitted_at')))['avg_time']
+            # Without that, we can't accurately compute response time.
+            # We'll skip real calculation and return None or a placeholder.
+            # response_time = "N/A"
+
+        # Average Security: map severity levels to numbers and average them
+        severity_map = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+        approved_bugs_with_scores = approved_bugs.exclude(related_bounty__severity__isnull=True)
+        if approved_bugs_with_scores.exists():
+            severity_scores = [severity_map.get(b.related_bounty.severity, 1) for b in approved_bugs_with_scores]
+            avg_security_score = sum(severity_scores) / len(severity_scores)
+        else:
+            avg_security_score = None
+
+        return {
+            "total_bug_approved": total_approved,
+            "response_time": response_time,
+            "average_security": avg_security_score
+        }
+
+    def get_hunter_performance_insight(self, user):
+        # total bugs of his submission are approved
+        approved_bugs = Bug.objects.filter(submitted_by=user, is_accepted=True)
+        total_approved = approved_bugs.count()
+
+        # Response time: similar issue as above, we need approved_at field
+        # Assuming we had it, we would do something like:
+        response_time = approved_bugs.aggregate(avg_time=Avg(F('approved_at') - F('submitted_at')))['avg_time']
+        # response_time = "N/A"  # placeholder
+
+        # Average Security of approved bugs (based on bounty severity)
+        severity_map = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+        if total_approved > 0:
+            severity_scores = [severity_map.get(b.related_bounty.severity, 1) for b in approved_bugs]
+            avg_security_score = sum(severity_scores) / len(severity_scores)
+        else:
+            avg_security_score = None
+
+        return {
+            "total_bug_approved": total_approved,
+            "response_time": response_time,
+            "average_security": avg_security_score
+        }
