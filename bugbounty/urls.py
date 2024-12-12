@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView, BugStatusView, RewardTransactionViewSet, WithdrawRewardViewSet
+from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView, BugStatusView, RewardTransactionViewSet, WithdrawRewardViewSet, LeaderboardView
 from .view import APIRootView
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/auth/', include('api.urls')),  
     path('api/bugs/<int:bugid>/comments', BugCommentListCreateView.as_view(), name='bug-comments-list-create'),
     path('api/bugs/<int:bugid>/status', BugStatusView.as_view(), name='bug-status-create'),
+   path('api/leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]

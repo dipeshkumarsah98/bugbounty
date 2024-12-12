@@ -4,8 +4,9 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import NotFound
 from django.conf import settings
+from django.db.models.functions import Coalesce
 from django.utils import timezone
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum, Q, DecimalField
 from rest_framework.response import Response
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import action
@@ -26,9 +27,13 @@ from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           SkillSerializer,
                           CommentSerializer,
                           BugStatusSerializer,
+                          LeaderboardUserSerializer,
                           )
+from django.contrib.auth import get_user_model, authenticate
 
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -372,3 +377,23 @@ class WithdrawRewardViewSet(viewsets.ViewSet):
             'new_balance': str(updated_balance),
             'transaction_id': transaction_obj.id
         }, status=status.HTTP_200_OK)
+
+class LeaderboardView(generics.ListAPIView):
+    serializer_class = LeaderboardUserSerializer
+    permission_classes = [IsAuthenticated]  # or IsAuthenticated if you prefer
+
+    def get_queryset(self):
+        # Annotate each hunter with total credits and debits
+        # Coalesce to ensure we get 0 instead of None if no transactions
+        credit = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='credit')), 0, output_field=DecimalField())
+        debits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='debit')), 0, output_field=DecimalField())
+
+        # net_reward = credits - debits
+        return (
+            User.objects
+            .filter(role='hunter')
+            .annotate(
+                net_reward=credit - debits
+            )
+            .order_by('-net_reward')[:10]  # top 10 hunters
+        )

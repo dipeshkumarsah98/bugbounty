@@ -215,6 +215,13 @@ class RewardTransactionSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'amount', 'transaction_type', 'created_at', 'created_by', 'note']
         read_only_fields = ['created_by', 'user']
 
+class LeaderboardUserSerializer(serializers.ModelSerializer):
+    net_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'name', 'net_reward']
+
 class RewardSummarySerializer(serializers.Serializer):
     current_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
     total_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
