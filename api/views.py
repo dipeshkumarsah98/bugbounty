@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 import logging
 from django.db import DatabaseError, transaction
+from django.shortcuts import get_object_or_404
 from .permission import IsClient, IsHunter
 from .models import Bounty, Bug, Skill, Comment, RewardTransaction
 from .utils import get_user_balance, send_bug_rejected_email, send_reward_email, send_withdrawal_email
@@ -24,6 +25,7 @@ from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           BountySerializer, 
                           BountyDetailSerializer,
                           BugSerializer, RewardSummarySerializer, RewardTransactionSerializer,
+                          HunterProfileSerializer,
                           UserRegistrationSerializer,
                           OTPVerificationSerializer,
                           SkillSerializer,
@@ -403,6 +405,85 @@ class LeaderboardView(generics.ListAPIView):
             .order_by('-net_reward')[:10]  # top 10 hunters
         )
 
+class HunterProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+        # Get the hunter user
+        hunter = get_object_or_404(User, pk=id, role='hunter')
+
+        # Calculate rank
+        rank = self.get_rank(hunter)
+
+        # Total bugs reported
+        total_bugs_reported = Bug.objects.filter(submitted_by=hunter).count()
+
+        # Success rate
+        approved_bugs = Bug.objects.filter(submitted_by=hunter, is_accepted=True).count()
+        success_rate = (approved_bugs / total_bugs_reported * 100) if total_bugs_reported > 0 else 0.0
+
+        # Recent activities
+        recent_activities = self.get_recent_activities(hunter)
+
+        data = {
+            'rank': rank,
+            'total_bugs_reported': total_bugs_reported,
+            'success_rate': success_rate,
+            'recent_activities': recent_activities
+        }
+
+        serializer = HunterProfileSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def get_rank(self, hunter):
+        # Annotate all hunters with net reward
+        credits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='credit')), Decimal('0'))
+        debits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='debit')), Decimal('0'))
+
+        all_hunters = (User.objects
+                       .filter(role='hunter')
+                       .annotate(net_reward=credits - debits)
+                       .order_by('-net_reward', 'id'))  # tie-break by id if needed
+
+        # Get a list of hunter ids in order
+        hunter_ids = list(all_hunters.values_list('id', flat=True))
+        # rank is the index of the hunter in this ordered list + 1
+        rank = hunter_ids.index(hunter.id) + 1
+        return rank
+
+    def get_recent_activities(self, hunter):
+        # Get recent bugs (submitted by hunter)
+        # Fields: date=submitted_at, action="Submitted bug {title}", reward=None
+        bug_activities = Bug.objects.filter(submitted_by=hunter).select_related('related_bounty').order_by('-submitted_at')[:5]
+        bug_acts = [{
+            'date': b.submitted_at,
+            'action': f"Submitted bug '{b.related_bounty.title}'",
+            'reward': None
+        } for b in bug_activities]
+
+        # Get recent reward transactions
+        # Fields: date=created_at, action depends on transaction_type, reward=amount
+        transaction_activities = RewardTransaction.objects.filter(user=hunter).order_by('-created_at')[:5]
+        trans_acts = []
+        for t in transaction_activities:
+            if t.transaction_type == 'credit':
+                act = "Received reward"
+            else:
+                act = "Withdrew reward"
+            trans_acts.append({
+                'date': t.created_at,
+                'action': act,
+                'reward': t.amount
+            })
+
+        # Combine and sort by date (descending)
+        combined = bug_acts + trans_acts
+        combined.sort(key=lambda x: x['date'], reverse=True)
+
+        # Return top 5 combined recent activities
+        return combined[:5]
+
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -452,6 +533,7 @@ class DashboardView(APIView):
 
         if top_hunter:
             return {
+                "id": top_hunter.id,
                 "hunter_name": top_hunter.name or top_hunter.email,
                 "net_reward": str(top_hunter.net_reward)
             }
