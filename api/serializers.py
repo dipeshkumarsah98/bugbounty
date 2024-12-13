@@ -250,6 +250,10 @@ class RecentActivitySerializer(serializers.Serializer):
     reward = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
 
 class HunterProfileSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    email = serializers.EmailField()
+    total_earned = serializers.DecimalField(max_digits=10, decimal_places=2)
+    current_balance = serializers.DecimalField(max_digits=10, decimal_places=2)
     rank = serializers.IntegerField()
     total_bugs_reported = serializers.IntegerField()
     success_rate = serializers.FloatField()

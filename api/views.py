@@ -7,7 +7,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.db.models.functions import Coalesce
-from django.utils import timezone
 from django.db.models import Count, Sum, Q, DecimalField, F, Avg
 from rest_framework.response import Response
 from rest_framework import generics, viewsets, status
@@ -34,7 +33,7 @@ from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           LeaderboardUserSerializer,
                           DashboardSerializer
                           )
-from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth import get_user_model
 
 logger = logging.getLogger(__name__)
 
@@ -424,8 +423,13 @@ class HunterProfileView(APIView):
 
         # Recent activities
         recent_activities = self.get_recent_activities(hunter)
+        reward = get_user_balance(request.user);
 
         data = {
+            'name': hunter.name,
+            'email': hunter.email,
+            'total_earned': reward.get('total_credits', Decimal('0')),
+            'current_balance': reward.get('balance', Decimal('0')),
             'rank': rank,
             'total_bugs_reported': total_bugs_reported,
             'success_rate': success_rate,
