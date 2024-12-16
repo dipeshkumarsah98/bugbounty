@@ -423,7 +423,7 @@ class HunterProfileView(APIView):
 
         # Recent activities
         recent_activities = self.get_recent_activities(hunter)
-        reward = get_user_balance(request.user);
+        reward = get_user_balance(hunter);
 
         data = {
             'name': hunter.name,
@@ -511,6 +511,7 @@ class DashboardView(APIView):
             total_credits=Coalesce(Sum('amount', filter=Q(transaction_type='credit')), Decimal('0')),
             total_debits=Coalesce(Sum('amount', filter=Q(transaction_type='debit')), Decimal('0'))
         )
+
         return aggregate_data['total_credits'] - aggregate_data['total_debits']
 
     def get_active_bounties(self, user):
