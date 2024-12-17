@@ -166,7 +166,8 @@ class LogoutView(APIView):
         return response
 
 class BountyViewSet(viewsets.ModelViewSet):
-    queryset = Bounty.objects.select_related('created_by').annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
+    queryset = Bounty.objects.select_related('created_by').filter(expiry_date__gt=timezone.now()) \
+        .annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsClient]
 
     def perform_create(self, serializer):
@@ -592,6 +593,7 @@ class DashboardView(APIView):
         if total_approved > 0:
             # If you had a field like bug.approved_at, you could do:
             response_time = str(approved_bugs.aggregate(avg_time=Avg(F('approved_at') - F('submitted_at')))['avg_time'])
+            response_time = "N/A" if response_time == "None" else str(response_time)
             # Without that, we can't accurately compute response time.
             # We'll skip real calculation and return None or a placeholder.
             # response_time = "N/A"
@@ -618,9 +620,10 @@ class DashboardView(APIView):
 
         # Response time: similar issue as above, we need approved_at field
         # Assuming we had it, we would do something like:
-        response_time = approved_bugs.aggregate(avg_time=Avg(F('approved_at') - F('submitted_at')))['avg_time']
-        # response_time = "N/A"  # placeholder
+        response_time = str(approved_bugs.aggregate(avg_time=Avg(F('approved_at') - F('submitted_at')))['avg_time'])
+        response_time = "N/A" if response_time == "None" else str(response_time)
 
+        
         # Average Security of approved bugs (based on bounty severity)
         severity_map = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
         if total_approved > 0:
