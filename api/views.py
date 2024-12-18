@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.utils import timezone
+import os
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
@@ -170,7 +171,10 @@ class BountyViewSet(viewsets.ModelViewSet):
         .annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsClient]
 
+    logger.info(f"Bounty View set: access_key {os.environ.get('S3_ACCESS_KEY')}, secret_key {os.environ.get('S3_SECRET_KEY')}")
+
     def perform_create(self, serializer):
+        logger.info(f"Creating new Bounty: access_key {os.environ.get('S3_ACCESS_KEY')}, secret_key {os.environ.get('S3_SECRET_KEY')}")
         serializer.save(created_by=self.request.user)
 
     def get_serializer_class(self):
@@ -387,22 +391,21 @@ class WithdrawRewardViewSet(viewsets.ViewSet):
 
 class LeaderboardView(generics.ListAPIView):
     serializer_class = LeaderboardUserSerializer
-    permission_classes = [IsAuthenticated]  # or IsAuthenticated if you prefer
+    permission_classes = [IsAuthenticated] 
 
     def get_queryset(self):
-        # Annotate each hunter with total credits and debits
-        # Coalesce to ensure we get 0 instead of None if no transactions
         credit = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='credit')), 0, output_field=DecimalField())
         debits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='debit')), 0, output_field=DecimalField())
+        solved_bugs = Count('bugs_submitted', distinct=True, filter=Q(bugs_submitted__is_accepted=True))
 
-        # net_reward = credits - debits
         return (
             User.objects
             .filter(role='hunter')
             .annotate(
-                net_reward=credit - debits
+                net_reward=credit - debits,
+                solved_bugs=solved_bugs
             )
-            .order_by('-net_reward')[:10]  # top 10 hunters
+            .order_by('-solved_bugs', '-net_reward')[:10]
         )
 
 class HunterProfileView(APIView):
@@ -431,6 +434,7 @@ class HunterProfileView(APIView):
             'email': hunter.email,
             'total_earned': reward.get('total_credits', Decimal('0')),
             'current_balance': reward.get('balance', Decimal('0')),
+            'solved_bugs': approved_bugs,
             'rank': rank,
             'total_bugs_reported': total_bugs_reported,
             'success_rate': success_rate,
@@ -443,13 +447,14 @@ class HunterProfileView(APIView):
 
     def get_rank(self, hunter):
         # Annotate all hunters with net reward
-        credits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='credit')), Decimal('0'))
+        credit = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='credit')), Decimal('0'))
         debits = Coalesce(Sum('reward_transactions__amount', filter=Q(reward_transactions__transaction_type='debit')), Decimal('0'))
+        solved_bugs = Count('bugs_submitted', filter=Q(bugs_submitted__is_accepted=True))
 
         all_hunters = (User.objects
                        .filter(role='hunter')
-                       .annotate(net_reward=credits - debits)
-                       .order_by('-net_reward', 'id'))  # tie-break by id if needed
+                       .annotate(net_reward=credit - debits, solved_bugs=solved_bugs)
+                       .order_by('-solved_bugs', '-net_reward', 'id'))
 
         # Get a list of hunter ids in order
         hunter_ids = list(all_hunters.values_list('id', flat=True))
@@ -469,6 +474,7 @@ class HunterProfileView(APIView):
 
         # Get recent reward transactions
         # Fields: date=created_at, action depends on transaction_type, reward=amount
+        # TODO: We don't need transaction stuff (done)
         transaction_activities = RewardTransaction.objects.filter(user=hunter).order_by('-created_at')[:5]
         trans_acts = []
         for t in transaction_activities:
@@ -487,7 +493,7 @@ class HunterProfileView(APIView):
         combined.sort(key=lambda x: x['date'], reverse=True)
 
         # Return top 5 combined recent activities
-        return combined[:5]
+        return bug_acts[:5]
 
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]

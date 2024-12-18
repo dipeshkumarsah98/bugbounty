@@ -217,10 +217,10 @@ class RewardTransactionSerializer(serializers.ModelSerializer):
 
 class LeaderboardUserSerializer(serializers.ModelSerializer):
     net_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
-
+    solved_bugs = serializers.IntegerField()
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'net_reward']
+        fields = ['id', 'email', 'name', 'net_reward', 'solved_bugs']
 
 class RewardSummarySerializer(serializers.Serializer):
     current_reward = serializers.DecimalField(max_digits=10, decimal_places=2)
@@ -255,6 +255,7 @@ class HunterProfileSerializer(serializers.Serializer):
     total_earned = serializers.DecimalField(max_digits=10, decimal_places=2)
     current_balance = serializers.DecimalField(max_digits=10, decimal_places=2)
     rank = serializers.IntegerField()
+    solved_bugs = serializers.IntegerField()
     total_bugs_reported = serializers.IntegerField()
     success_rate = serializers.FloatField()
     recent_activities = RecentActivitySerializer(many=True)
