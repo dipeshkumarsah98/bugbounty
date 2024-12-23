@@ -171,13 +171,18 @@ class LogoutView(APIView):
         return response
 
 class BountyViewSet(viewsets.ModelViewSet):
-    queryset = Bounty.objects.select_related('created_by').filter(expiry_date__gt=timezone.now()) \
-        .annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsClient]
 
     def perform_create(self, serializer):
-        logger.info(f"Creating new Bounty: access_key {os.environ.get('S3_ACCESS_KEY')}, secret_key {os.environ.get('S3_SECRET_KEY')}")
         serializer.save(created_by=self.request.user)
+    
+    def get_queryset(self):
+        if self.action == 'retrieve':
+            return Bounty.objects.select_related('created_by') \
+            .annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
+        
+        return Bounty.objects.select_related('created_by').filter(expiry_date__gt=timezone.now()) \
+        .annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
