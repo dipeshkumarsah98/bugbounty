@@ -497,7 +497,6 @@ class HunterProfileView(APIView):
 
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
         user = request.user
 
@@ -508,6 +507,7 @@ class DashboardView(APIView):
             "recent_activities": self.get_recent_activities(user),
             "performance_insight": self.get_performance_insight(user)
         }
+        print(f"recent activities: {data['recent_activities']}")
         serializer = DashboardSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
@@ -558,7 +558,10 @@ class DashboardView(APIView):
             # Recent bounties created
             recent_bounties = Bounty.objects.filter(created_by=user).order_by('-created_at')[:2]
             for bounty in recent_bounties:
-                activities.append(f"Created a new bounty: {bounty.title}")
+                activities.append({
+                    'date': bounty.created_at,
+                    'action':f"Created a new bounty: {bounty.title}"
+                    })
             
             # TODO: Add date for each activity
 
@@ -568,13 +571,18 @@ class DashboardView(APIView):
             # This might require a more complex logic depending on how approval is recorded.
             approved_bugs = Bug.objects.filter(related_bounty__created_by=user, is_accepted=True).order_by('-submitted_at')[:1]
             for bug in approved_bugs:
-                activities.append(f"Approved bug in bounty '{bug.related_bounty.title}'")
-
+                activities.append({
+                    "date": bug.approved_at if bug.approved_at else bug.submitted_at,
+                    'action': f"Approved bug in bounty '{bug.related_bounty.title}'"
+                    })
         else:
             # Hunter’s activities: recent bug submissions
             submitted_bugs = Bug.objects.filter(submitted_by=user).order_by('-submitted_at')[:3]
             for bug in submitted_bugs:
-                activities.append(f"Submitted bug in bounty '{bug.related_bounty.title}'")
+                activities.append({
+                    'date': bug.submitted_at,
+                    'action': f"Submitted bug in bounty '{bug.related_bounty.title}'"
+                    })
 
         return activities
 

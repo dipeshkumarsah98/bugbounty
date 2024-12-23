@@ -237,11 +237,15 @@ class PerformanceInsightSerializer(serializers.Serializer):
     response_time = serializers.CharField(max_length=50, allow_null=True)
     average_security = serializers.FloatField(allow_null=True)
 
+class DashboardActivitySerializer(serializers.Serializer):
+    date = serializers.DateTimeField()
+    action = serializers.CharField()
+
 class DashboardSerializer(serializers.Serializer):
     active_bounties = serializers.IntegerField()
     my_token = serializers.CharField()
     top_hunter_of_the_month = TopHunterSerializer(allow_null=True)
-    recent_activities = serializers.ListField(child=serializers.CharField(max_length=255))
+    recent_activities = DashboardActivitySerializer(many=True)
     performance_insight = PerformanceInsightSerializer()
 
 class RecentActivitySerializer(serializers.Serializer):
