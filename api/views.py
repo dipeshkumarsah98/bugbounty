@@ -175,8 +175,6 @@ class BountyViewSet(viewsets.ModelViewSet):
         .annotate(bugs_count=Count('bugs')).order_by('-created_at').all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsClient]
 
-    logger.info(f"Bounty View set: access_key {os.environ.get('S3_ACCESS_KEY')}, secret_key {os.environ.get('S3_SECRET_KEY')}")
-
     def perform_create(self, serializer):
         logger.info(f"Creating new Bounty: access_key {os.environ.get('S3_ACCESS_KEY')}, secret_key {os.environ.get('S3_SECRET_KEY')}")
         serializer.save(created_by=self.request.user)
@@ -692,7 +690,7 @@ class CurrentUserProfileView(APIView):
             # role == 'hunter'
             total_bugs = Bug.objects.filter(submitted_by=user).count()
             approved_bugs = Bug.objects.filter(submitted_by=user, is_accepted=True).count()
-            success_rate = (approved_bugs / total_bugs * 100) if total_bugs > 0 else 0.0
+            success_rate = round((approved_bugs / total_bugs * 100) , 2)if total_bugs > 0 else 0.0
 
             closed_bugs_qs = Bug.objects.filter(submitted_by=user, status__in=['accepted', 'rejected']).select_related('related_bounty')
             pending_bugs_qs = Bug.objects.filter(submitted_by=user, status='pending').select_related('related_bounty')
