@@ -263,3 +263,36 @@ class HunterProfileSerializer(serializers.Serializer):
     total_bugs_reported = serializers.IntegerField()
     success_rate = serializers.FloatField()
     recent_activities = RecentActivitySerializer(many=True)
+
+class UserBountySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bounty
+        fields = ['id', 'title', 'expiry_date', 'created_at'] 
+
+class UserBugSerializer(serializers.ModelSerializer):
+    title = serializers.ReadOnlyField(source='related_bounty.title')
+    class Meta:
+        model = Bug
+        fields = ['id', 'title', 'status', 'is_accepted','approved_at', 'submitted_at'] 
+
+
+class CurrentUserHunterSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    email = serializers.EmailField()
+    role = serializers.CharField()
+    balance = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_bugs = serializers.IntegerField()
+    solved_bugs = serializers.IntegerField()
+    success_rate = serializers.DecimalField(max_digits=10, decimal_places=2)
+    closed_bugs = serializers.ListField(child=serializers.DictField())
+    pending_bugs = serializers.ListField(child=serializers.DictField())
+
+class CurrentUserClientSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    email = serializers.EmailField()
+    role = serializers.CharField()
+    balance = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_bounties = serializers.IntegerField()
+    expired_bounties = serializers.IntegerField()
+    bounties = serializers.ListField(child=serializers.DictField())
+

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView, BugStatusView, RewardTransactionViewSet, WithdrawRewardViewSet, LeaderboardView, DashboardView, HunterProfileView
+from api.views import SkillViewSet, BountyViewSet, BugViewSet, BugCommentListCreateView, BugStatusView, RewardTransactionViewSet, WithdrawRewardViewSet, LeaderboardView, DashboardView, HunterProfileView, CurrentUserProfileView
 from .view import APIRootView
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/bugs/<int:bugid>/comments', BugCommentListCreateView.as_view(), name='bug-comments-list-create'),
     path('api/bugs/<int:bugid>/status', BugStatusView.as_view(), name='bug-status-create'),
     path('api/hunters/<int:id>/profile/', HunterProfileView.as_view(), name='hunter-profile'),
+    path('api/profile/', CurrentUserProfileView.as_view(), name='profile'),
     path('api/leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
     path('api/dashboard/', DashboardView.as_view(), name='dashboard'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

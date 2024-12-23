@@ -32,7 +32,11 @@ from .serializers import (BugDetailSerializer, CustomTokenObtainPairSerializer,
                           CommentSerializer,
                           BugStatusSerializer,
                           LeaderboardUserSerializer,
-                          DashboardSerializer
+                          DashboardSerializer,
+                          CurrentUserClientSerializer,
+                          CurrentUserHunterSerializer,
+                          UserBountySerializer,
+                          UserBugSerializer
                           )
 from django.contrib.auth import get_user_model
 
@@ -651,3 +655,64 @@ class DashboardView(APIView):
             "response_time": response_time,
             "average_security": avg_security_score
         }
+
+class CurrentUserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        reward = get_user_balance(user)
+        balance = reward.get('balance', Decimal('0'))
+
+        if user.role == 'client':
+            # Query data
+            total_bounties = Bounty.objects.filter(created_by=user).count()
+            expired_bounties = Bounty.objects.filter(created_by=user, expiry_date__lt=timezone.now()).count()
+            latest_bounties_qs = Bounty.objects.filter(created_by=user).order_by('-created_at')[:5]
+
+            # Serialize the bounties
+            latest_bounties_data = UserBountySerializer(latest_bounties_qs, many=True).data
+
+            # Prepare a data dict
+            data = {
+                'name': user.name,
+                'email': user.email,
+                'role': user.role,
+                'balance': balance,
+                'total_bounties': total_bounties,
+                'expired_bounties': expired_bounties,
+                'bounties': latest_bounties_data, 
+            }
+
+            serializer = CurrentUserClientSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        else:
+            # role == 'hunter'
+            total_bugs = Bug.objects.filter(submitted_by=user).count()
+            approved_bugs = Bug.objects.filter(submitted_by=user, is_accepted=True).count()
+            success_rate = (approved_bugs / total_bugs * 100) if total_bugs > 0 else 0.0
+
+            closed_bugs_qs = Bug.objects.filter(submitted_by=user, status__in=['accepted', 'rejected']).select_related('related_bounty')
+            pending_bugs_qs = Bug.objects.filter(submitted_by=user, status='pending').select_related('related_bounty')
+
+            # Serialize them
+            closed_bugs_data = UserBugSerializer(closed_bugs_qs, many=True).data
+            pending_bugs_data = UserBugSerializer(pending_bugs_qs, many=True).data
+
+            data = {
+                'name': user.name,
+                'email': user.email,
+                'role': user.role,
+                'balance': balance,
+                'total_bugs': total_bugs,
+                'solved_bugs': approved_bugs,
+                'success_rate': success_rate,
+                'closed_bugs': closed_bugs_data,     # list of dict
+                'pending_bugs': pending_bugs_data,   # list of dict
+            }
+
+            serializer = CurrentUserHunterSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
