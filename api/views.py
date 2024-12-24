@@ -668,15 +668,12 @@ class CurrentUserProfileView(APIView):
         balance = reward.get('balance', Decimal('0'))
 
         if user.role == 'client':
-            # Query data
             total_bounties = Bounty.objects.filter(created_by=user).count()
             expired_bounties = Bounty.objects.filter(created_by=user, expiry_date__lt=timezone.now()).count()
             latest_bounties_qs = Bounty.objects.filter(created_by=user).order_by('-created_at')[:5]
 
-            # Serialize the bounties
             latest_bounties_data = UserBountySerializer(latest_bounties_qs, many=True).data
 
-            # Prepare a data dict
             data = {
                 'name': user.name,
                 'email': user.email,
@@ -692,7 +689,6 @@ class CurrentUserProfileView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         else:
-            # role == 'hunter'
             total_bugs = Bug.objects.filter(submitted_by=user).count()
             approved_bugs = Bug.objects.filter(submitted_by=user, is_accepted=True).count()
             success_rate = round((approved_bugs / total_bugs * 100) , 2)if total_bugs > 0 else 0.0
@@ -700,7 +696,6 @@ class CurrentUserProfileView(APIView):
             closed_bugs_qs = Bug.objects.filter(submitted_by=user, status__in=['accepted', 'rejected']).select_related('related_bounty')
             pending_bugs_qs = Bug.objects.filter(submitted_by=user, status='pending').select_related('related_bounty')
 
-            # Serialize them
             closed_bugs_data = UserBugSerializer(closed_bugs_qs, many=True).data
             pending_bugs_data = UserBugSerializer(pending_bugs_qs, many=True).data
 
@@ -712,8 +707,9 @@ class CurrentUserProfileView(APIView):
                 'total_bugs': total_bugs,
                 'solved_bugs': approved_bugs,
                 'success_rate': success_rate,
-                'closed_bugs': closed_bugs_data,     # list of dict
-                'pending_bugs': pending_bugs_data,   # list of dict
+                'total_earned': reward.get('total_credits', Decimal('0')),
+                'closed_bugs': closed_bugs_data,     
+                'pending_bugs': pending_bugs_data,   
             }
 
             serializer = CurrentUserHunterSerializer(data=data)
